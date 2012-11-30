@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">TwitterQuickSearch</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="menu_settings">Settings</string>
+	<string name="twitter_text">RT @EFORDBALL: Homework for school back in the day #Android #google #graphicdesigner #robot @fullsail http://t.co/5iidqeZh </string>
+	<string name="twitter_user">botwarnews</string>
+</resources>
