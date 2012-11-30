@@ -10,6 +10,8 @@ public class Form {
 	public static int PRIMARY_BUTTON = 1;
 	public static int TEXT_FIELD = 2;
 	
+	
+	// show a basic row, a la the videos
 	public static LinearLayout entryRowWithButton(Context context, String hint, String buttonText) {
 		LinearLayout ll = new LinearLayout(context);
 		LayoutParams lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);

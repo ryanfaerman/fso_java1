@@ -4,6 +4,7 @@ public class SearchResult implements Tweet {
 	String user;
 	String text;
 	
+	// constructor
 	public SearchResult(String user, String text) {
 		setUser(user);
 		setText(text);
