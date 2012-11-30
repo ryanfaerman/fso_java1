@@ -171,7 +171,7 @@ public class MainActivity extends Activity {
         for(int i=k; i< (TweetResultLimit.SMALL.value*p); i++) {
         	// retreive the result from the array
         	SearchResult r = (SearchResult) tweets.get(i);
-        	tootLoot = tootLoot + Integer.toString(p) +" @"+r.getUser()+": "+r.getText()+"\r\n----\r\n";
+        	tootLoot = tootLoot + Integer.toString(i) +" @"+r.getUser()+": "+r.getText()+"\r\n----\r\n";
         }
         // set dem toots
         setToots(tootLoot);
