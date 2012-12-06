@@ -1,17 +1,27 @@
 package com.nwitty.java1.twitterquicksearch;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 
 import com.nwitty.helpers.Form;
+import com.nwitty.helpers.Internet;
 import com.nwitty.helpers.SearchResult;
 import com.nwitty.helpers.Tweet;
 import com.nwitty.helpers.TweetResultLimit;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -20,164 +30,87 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
-	// predefine these for use in callbacks and such
-	LinearLayout ll;
-	LayoutParams lp;
-	TextView hiddenView;
-	LinearLayout resultLayout;
-	ArrayList<Tweet> tweets;
-	int currentPage;
-	HashMap<TweetResultLimit, Integer> limits;
-	LinearLayout paginator;
-	TextView tv;
+	
+	LinearLayout _appLayout;
+	LayoutParams _lp;
+	Context _context;
+	SearchForm _search;
+	RecentSearches _history;
+	Boolean _connected = false;
+	SearchResults _results;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        _context = this;
         
-        // always start on the first page of search results
-        currentPage = 1;
+        // Initialize the main layout
+        _appLayout = new LinearLayout(_context);
+        _appLayout.setOrientation(LinearLayout.VERTICAL);
+        _lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+        _appLayout.setLayoutParams(_lp);
         
-        // initialize our main linear layout
-        ll = new LinearLayout(this);
-        ll.setOrientation(LinearLayout.VERTICAL);
-        lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-        ll.setLayoutParams(lp);
+        // Add a new search form
+        _search = new SearchForm(_context, "Search Query", "Go");
+        _appLayout.addView(_search);
         
-        // Build an form entry with the form helper
-        LinearLayout queryRow = Form.entryRowWithButton(this, "Search Query", "Go");
-        ll.addView(queryRow);
-        // isolate the search button for binding
-        Button searchButton = (Button) queryRow.findViewById(Form.PRIMARY_BUTTON);
-        // setup the click handler
-        searchButton.setOnClickListener(new View.OnClickListener() {
-			
+        // handle the button click
+        _search.getButton().setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				// remove these views so they don't get duplicated or anything like that
-				ll.removeView(resultLayout);
-				ll.removeView(paginator);
 				
-				// load dem toots!
-				tootsForPage(currentPage);
+				String searchTerm = _search.getField().getText().toString();
 				
-				// add the views "refreshing" them with the new results
-				ll.addView(paginator);
-				ll.addView(resultLayout);
-			}
-		});
-        
-        // Build the tweet list
-        tweets = new ArrayList<Tweet>();
-        for(int i=0; i<50; i++) {
-        	// these come from some static stuff in the resources
-        	tweets.add(new SearchResult(getString(R.string.twitter_user), getString(R.string.twitter_text)));
-        }
-        
-        // prepare the paginator
-        paginator = new LinearLayout(this);
-        lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-        paginator.setLayoutParams(lp);
-        
-        // this will be the previous button
-        Button prevButton = new Button(this);
-        prevButton.setText("<-");
-        // 1.0f so it will take 1/4 of the row
-        lp = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1.0f);
-        prevButton.setLayoutParams(lp);
-        prevButton.setOnClickListener(new View.OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				if(currentPage > 1) {
-					// don't let the current page go to 0
-					currentPage--;
+				if (searchTerm.length() == 0) {
+					// refuse to search if the query is blank
+					_results.addRow("BLURGH! GIMME DER QWERI!!1!");
+					Toast toast = Toast.makeText(_context, "OMEGERD! DER QWERI!", Toast.LENGTH_SHORT);
+					toast.show();
+				} else {
+					// clear any previous results
+					_results.reset();
+					// Add the search query to the history
+					_history.addQuery(searchTerm);
 					
+					// Do the actual search fool!
+					getSearchResults(searchTerm);
 				}
-				// load the required toots
-				tootsForPage(currentPage);
+				
 			}
 		});
-        // this is part of the paginator
-        paginator.addView(prevButton);
         
-        // setup the header showing current location in the toot results
-        tv = new TextView(this);
-        limits = TweetResultLimit.pageCount(tweets.size());
-        tv.setText("Page 1 of "+limits.get(TweetResultLimit.SMALL).toString());
-        // 2.0f so it will take 2/4 of the row
-        lp = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 2.0f);
-        tv.setLayoutParams(lp);
-        // this is part of the paginator
-        paginator.addView(tv);
+        _history = new RecentSearches(_context);
+        _appLayout.addView(_history);
         
-        // this will be the next button
-        Button nextButton = new Button(this);
-        nextButton.setText("->");
-        // 1.0f so it will take 1/4 of the row
-        lp = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1.0f);
-        nextButton.setLayoutParams(lp);
-        nextButton.setOnClickListener(new View.OnClickListener() {
+        _connected = Internet.getConnectionStatus(_context);
+        
+        if (_connected) {
+        	Toast toast = Toast.makeText(_context, "OMEGERD! INDERNETS!", Toast.LENGTH_LONG);
+			toast.show();
+		} else {
+			Toast toast = Toast.makeText(_context, "OMG! NO INTERNET CONNECTIONS", Toast.LENGTH_LONG);
+			toast.show();
 			
-			@Override
-			public void onClick(View v) {
-				if(currentPage < limits.get(TweetResultLimit.SMALL)) {
-					currentPage++;
-				}
-				tootsForPage(currentPage);
+			_results.addRow("NO INTERBLAG CONNECTION!");
+			
+			Boolean hasResultCache = false;
+			if (hasResultCache) {
+				_results.addRow("GOT DER KASHD QWERIS");
+			} else {
+				_results.addRow("why bother... no internet and no cache makes search results a dull app");
 			}
-		});
-        // this is part of the paginator
-        paginator.addView(nextButton);
-        // we don't add it to the main LL since we don't want it displayed until there are results!
+		}
         
-        // prepare the results layout
-        resultLayout = new LinearLayout(this);
-        lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-        resultLayout.setLayoutParams(lp);
-        // we don't add it to the main LL since we don't want it displayed until there are results!
+        _results = new SearchResults(_context);
+        _appLayout.addView(_results);
+  
         
-    	
-        
-        // show the LL, DUH!
-        setContentView(ll);
+        setContentView(_appLayout);
     }
-    
-    // build the toots textview
-    public void setToots(String toots) {
-    	TextView toot = new TextView(this);
-    	
-    	lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-    	toot.setLayoutParams(lp);
-
-        toot.setText(toots);
-        // clear any existing toots from the results and show our new toots
-        resultLayout.removeAllViews();
-        resultLayout.addView(toot);
-    }
-    
-    public void tootsForPage(int p) {
-    	// adjust the header to be "page X of PAGES"
-    	tv.setText("Page "+Integer.toString(p)+" of "+limits.get(TweetResultLimit.SMALL).toString());
-    	
-    	// init the string, easier this way, trust me
-    	String tootLoot = "";
-    	// calculate the number of toots to skip
-    	int k = ((p-1)*TweetResultLimit.SMALL.value);
-    	
-    	// starting at the offset, go to the limit
-        for(int i=k; i< (TweetResultLimit.SMALL.value*p); i++) {
-        	// retreive the result from the array
-        	SearchResult r = (SearchResult) tweets.get(i);
-        	tootLoot = tootLoot + Integer.toString(i) +" @"+r.getUser()+": "+r.getText()+"\r\n----\r\n";
-        }
-        // set dem toots
-        setToots(tootLoot);
-    }
-    
-
+ 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -185,4 +118,56 @@ public class MainActivity extends Activity {
         return true;
     }
     
+    private void getSearchResults(String searchTerm) {
+    	String baseURL = "http://search.twitter.com/search.json?rpp=50&result_type=mixed&page=1&q=";
+    	String q = "";
+    	try {
+			q = URLEncoder.encode(searchTerm, "UTF-8");
+		} catch (Exception e) {
+			Log.e("BAD URL", "ENCODING PROBLEM");
+		}
+    	
+    	URL requestURL;
+    	try {
+			requestURL = new URL(baseURL+q);
+			SearchRequest sr = new SearchRequest();
+			
+	    	Toast toast = Toast.makeText(_context, "OMEGERD! SERCHIN", Toast.LENGTH_SHORT);
+			toast.show();
+			sr.execute(requestURL);
+		} catch (MalformedURLException e) {
+			Log.e("BAD URL", "MALFORMED URL");
+			requestURL = null;
+		}
+
+    }
+    
+    private class SearchRequest extends AsyncTask<URL, Void, String> {
+    	@Override
+    	protected String doInBackground(URL...urls) {
+    		String response = "";
+    		for(URL url: urls) {
+    			response = Internet.get(url);
+    		}
+    		return response;
+    	}
+    	
+    	@Override
+    	protected void onPostExecute(String result) {
+    		Log.i("URL RESPONSE", result);
+    		try {
+    			JSONObject json = new JSONObject(result);
+    			JSONArray results = json.getJSONArray("results");
+    			for (int i = 0; i < results.length(); i++) {
+					JSONObject tweet = results.getJSONObject(i);
+					String r = "@"+tweet.getString("from_user")+": "+tweet.getString("text");
+					_results.addRow(r);
+				}
+    			
+			} catch (JSONException e) {
+				Log.e("JSON", "JSON OBJECT EXCEPTION");
+			}
+    		
+    	}
+    }
 }
