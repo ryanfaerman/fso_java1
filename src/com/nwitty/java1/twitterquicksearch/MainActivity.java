@@ -3,7 +3,6 @@ package com.nwitty.java1.twitterquicksearch;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.json.JSONArray;
@@ -12,11 +11,8 @@ import org.json.JSONObject;
 
 
 
-import com.nwitty.helpers.Form;
+import com.nwitty.helpers.FileHelpers;
 import com.nwitty.helpers.Internet;
-import com.nwitty.helpers.SearchResult;
-import com.nwitty.helpers.Tweet;
-import com.nwitty.helpers.TweetResultLimit;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -26,11 +22,11 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.Button;
+import android.widget.AdapterView;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
-import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.Spinner;
 
 public class MainActivity extends Activity {
 	
@@ -41,11 +37,14 @@ public class MainActivity extends Activity {
 	RecentSearches _history;
 	Boolean _connected = false;
 	SearchResults _results;
+	HashMap<String, String> _queryCache;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _context = this;
+        
+        _queryCache = loadHistory();
         
         // Initialize the main layout
         _appLayout = new LinearLayout(_context);
@@ -72,35 +71,63 @@ public class MainActivity extends Activity {
 				} else {
 					// clear any previous results
 					_results.reset();
+					
+					if (_connected) {
+						// Do the actual search fool!
+						getSearchResults(searchTerm);
+					} else {
+						// no network, let's try to get it from cache
+						String cachedResults = _queryCache.get(searchTerm);
+						if (cachedResults == null || cachedResults.length() == 0) {
+							// no cached results for this query, throw some Ds
+							_results.addRow("boo hoo, no cached results for your query!");
+							Toast toast = Toast.makeText(_context, "OMEGERD! NUN DEM KASHD RIZULTS!", Toast.LENGTH_SHORT);
+							toast.show();
+						} else {
+							// looks like the cache hit, show it
+							Toast toast = Toast.makeText(_context, "OMEGERD! GOT DER KASHD QWERIS!", Toast.LENGTH_SHORT);
+							toast.show();
+							displayResults(cachedResults);
+						}
+						
+					}
 					// Add the search query to the history
 					_history.addQuery(searchTerm);
 					
-					// Do the actual search fool!
-					getSearchResults(searchTerm);
+					
+					
 				}
 				
 			}
 		});
         
         _history = new RecentSearches(_context);
+        // get the previous search terms
+        for (String key: _queryCache.keySet()) {
+        	_history.addQuery(key);
+        }
+        
         _appLayout.addView(_history);
         
+        // internet connection logic
         _connected = Internet.getConnectionStatus(_context);
         
-        if (_connected) {
+        if (_connected.booleanValue() == true) {
+        	// just let the user know internets were detected
         	Toast toast = Toast.makeText(_context, "OMEGERD! INDERNETS!", Toast.LENGTH_LONG);
 			toast.show();
 		} else {
+			// alert the user that there is no internet
 			Toast toast = Toast.makeText(_context, "OMG! NO INTERNET CONNECTIONS", Toast.LENGTH_LONG);
 			toast.show();
 			
 			_results.addRow("NO INTERBLAG CONNECTION!");
 			
-			Boolean hasResultCache = false;
-			if (hasResultCache) {
-				_results.addRow("GOT DER KASHD QWERIS");
-			} else {
+			if (_queryCache.isEmpty()) {
+				// looks like there are 0 cached queries
 				_results.addRow("why bother... no internet and no cache makes search results a dull app");
+			} else {
+				_results.addRow("GOT DER KASHD QWERIS");
 			}
 		}
         
@@ -147,6 +174,7 @@ public class MainActivity extends Activity {
     	protected String doInBackground(URL...urls) {
     		String response = "";
     		for(URL url: urls) {
+    			// make the request
     			response = Internet.get(url);
     		}
     		return response;
@@ -156,18 +184,50 @@ public class MainActivity extends Activity {
     	protected void onPostExecute(String result) {
     		Log.i("URL RESPONSE", result);
     		try {
-    			JSONObject json = new JSONObject(result);
-    			JSONArray results = json.getJSONArray("results");
-    			for (int i = 0; i < results.length(); i++) {
-					JSONObject tweet = results.getJSONObject(i);
-					String r = "@"+tweet.getString("from_user")+": "+tweet.getString("text");
-					_results.addRow(r);
-				}
+    			// show dem results - duh!
+    			displayResults(result);
     			
+    			// we need to pull the query from the JSON for the cache 
+    			JSONObject json = new JSONObject(result);
+    			    			
+    			// cache the query and results for later use
+    			_queryCache.put(json.getString("query"), result);
+    			FileHelpers.storeObjectFile(_context, "query_history", _queryCache, false);
 			} catch (JSONException e) {
 				Log.e("JSON", "JSON OBJECT EXCEPTION");
 			}
     		
     	}
+    }
+    
+    private void displayResults(String result) {
+    	try {
+    		JSONObject json = new JSONObject(result);
+			JSONArray results = json.getJSONArray("results");
+		
+    		for (int i = 0; i < results.length(); i++) {
+    			// build the tweet and add it
+    			JSONObject tweet = results.getJSONObject(i);
+    			String r = "@"+tweet.getString("from_user")+": "+tweet.getString("text");
+    			_results.addRow(r);
+    		
+			}
+    	} catch (JSONException e) {
+			Log.e("JSON", "JSON OBJECT EXCEPTION");
+		}
+    }
+    
+    private HashMap<String, String> loadHistory() {
+    	Object stored = FileHelpers.readObjectFile(_context, "query_history", false);
+    	
+    	HashMap<String, String> history;
+    	if(stored == null) {
+    		Log.i("HISTORY", "NOT HISTORY FILE FOUND");
+    		history = new HashMap<String, String>();
+    	} else {
+    		history = (HashMap<String, String>) stored;
+    	}
+    	
+    	return history;
     }
 }
