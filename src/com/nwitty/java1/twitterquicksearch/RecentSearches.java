@@ -10,7 +10,7 @@ import android.widget.Spinner;
 public class RecentSearches extends LinearLayout {
 	
 	Context _context;
-	Spinner _list;
+	public Spinner _list;
 	ArrayList<String> _queries = new ArrayList<String>();
 	
 	public RecentSearches(Context context) {

@@ -21,8 +21,10 @@ public class SearchForm extends LinearLayout {
 		_searchField.setLayoutParams(lp);
 		_searchField.setHint(hint);
 		
+		
 		_searchButton = new Button(context);
 		_searchButton.setText(buttonText);
+		
 		
 		this.addView(_searchField);
 		this.addView(_searchButton);

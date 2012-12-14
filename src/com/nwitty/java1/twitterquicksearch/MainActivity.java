@@ -23,12 +23,13 @@ import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.Toast;
-import android.widget.Spinner;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements OnItemSelectedListener {
 	
 	LinearLayout _appLayout;
 	LayoutParams _lp;
@@ -38,10 +39,13 @@ public class MainActivity extends Activity {
 	Boolean _connected = false;
 	SearchResults _results;
 	HashMap<String, String> _queryCache;
+	String _helpText = "Enter a search term and touch \"Go\".";
+	ImageView _logo;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
         _context = this;
         
         _queryCache = loadHistory();
@@ -56,6 +60,12 @@ public class MainActivity extends Activity {
         _search = new SearchForm(_context, "Search Query", "Go");
         _appLayout.addView(_search);
         
+        
+        // Drop in the big form of the logo
+        _logo = new ImageView(_context);
+        _logo.setImageResource(R.drawable.quick_search);
+        _appLayout.addView(_logo);
+        
         // handle the button click
         _search.getButton().setOnClickListener(new OnClickListener() {
 			@Override
@@ -65,9 +75,7 @@ public class MainActivity extends Activity {
 				
 				if (searchTerm.length() == 0) {
 					// refuse to search if the query is blank
-					_results.addRow("BLURGH! GIMME DER QWERI!!1!");
-					Toast toast = Toast.makeText(_context, "OMEGERD! DER QWERI!", Toast.LENGTH_SHORT);
-					toast.show();
+					_results.addRow(_helpText);
 				} else {
 					// clear any previous results
 					_results.reset();
@@ -80,12 +88,12 @@ public class MainActivity extends Activity {
 						String cachedResults = _queryCache.get(searchTerm);
 						if (cachedResults == null || cachedResults.length() == 0) {
 							// no cached results for this query, throw some Ds
-							_results.addRow("boo hoo, no cached results for your query!");
-							Toast toast = Toast.makeText(_context, "OMEGERD! NUN DEM KASHD RIZULTS!", Toast.LENGTH_SHORT);
+							_results.addRow("No cached results for your query");
+							Toast toast = Toast.makeText(_context, "No cached results found", Toast.LENGTH_SHORT);
 							toast.show();
 						} else {
 							// looks like the cache hit, show it
-							Toast toast = Toast.makeText(_context, "OMEGERD! GOT DER KASHD QWERIS!", Toast.LENGTH_SHORT);
+							Toast toast = Toast.makeText(_context, "Using a cached query result", Toast.LENGTH_SHORT);
 							toast.show();
 							displayResults(cachedResults);
 						}
@@ -106,33 +114,36 @@ public class MainActivity extends Activity {
         for (String key: _queryCache.keySet()) {
         	_history.addQuery(key);
         }
+        _history._list.setOnItemSelectedListener(this);
+        //_appLayout.addView(_history);
         
-        _appLayout.addView(_history);
+        _results = new SearchResults(_context);
+        _appLayout.addView(_results);
         
         // internet connection logic
         _connected = Internet.getConnectionStatus(_context);
         
+        _results.addRow(_helpText);
+        
         if (_connected.booleanValue() == true) {
-        	// just let the user know internets were detected
-        	Toast toast = Toast.makeText(_context, "OMEGERD! INDERNETS!", Toast.LENGTH_LONG);
-			toast.show();
+        	// no need to let the user know we detected internet since this is the assumed state
+        	// this is kept for any internet specific logic
 		} else {
 			// alert the user that there is no internet
-			Toast toast = Toast.makeText(_context, "OMG! NO INTERNET CONNECTIONS", Toast.LENGTH_LONG);
+			Toast toast = Toast.makeText(_context, "NO INTERNET CONNECTION", Toast.LENGTH_LONG);
 			toast.show();
 			
-			_results.addRow("NO INTERBLAG CONNECTION!");
+			_results.addRow("Unable to detect an internet connection.");
 			
 			if (_queryCache.isEmpty()) {
 				// looks like there are 0 cached queries
-				_results.addRow("why bother... no internet and no cache makes search results a dull app");
+				_results.addRow("You have no cached queries and will be unable to search for anything");
 			} else {
-				_results.addRow("GOT DER KASHD QWERIS");
+				_results.addRow("You have "+_queryCache.size() + "cached queries. Some results may be found.");
 			}
 		}
         
-        _results = new SearchResults(_context);
-        _appLayout.addView(_results);
+        
   
         
         setContentView(_appLayout);
@@ -159,7 +170,7 @@ public class MainActivity extends Activity {
 			requestURL = new URL(baseURL+q);
 			SearchRequest sr = new SearchRequest();
 			
-	    	Toast toast = Toast.makeText(_context, "OMEGERD! SERCHIN", Toast.LENGTH_SHORT);
+	    	Toast toast = Toast.makeText(_context, "Searching Twitter", Toast.LENGTH_SHORT);
 			toast.show();
 			sr.execute(requestURL);
 		} catch (MalformedURLException e) {
@@ -187,6 +198,9 @@ public class MainActivity extends Activity {
     			// show dem results - duh!
     			displayResults(result);
     			
+    			// hide the logo
+    			_appLayout.removeView(_logo);
+    			
     			// we need to pull the query from the JSON for the cache 
     			JSONObject json = new JSONObject(result);
     			    			
@@ -212,6 +226,9 @@ public class MainActivity extends Activity {
     			_results.addRow(r);
     		
 			}
+    		if(results.length() == 0) {
+    			_results.addRow("No tweets found.");
+    		}
     	} catch (JSONException e) {
 			Log.e("JSON", "JSON OBJECT EXCEPTION");
 		}
@@ -229,5 +246,18 @@ public class MainActivity extends Activity {
     	}
     	
     	return history;
+    }
+    
+    public void onItemSelected(AdapterView<?> parent, View view, 
+            int pos, long id) {
+        // An item was selected. You can retrieve the selected item using
+        Log.i("SELECTED", parent.getItemAtPosition(pos).toString());
+        Toast toast = Toast.makeText(_context, "OMEGERD! SLEKTED", Toast.LENGTH_SHORT);
+		toast.show();
+    }
+
+    public void onNothingSelected(AdapterView<?> parent) {
+        // Another interface callback
+    	Log.i("SELECTED", "NOTHING");
     }
 }
