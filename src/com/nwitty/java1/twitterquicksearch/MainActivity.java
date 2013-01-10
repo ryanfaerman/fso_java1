@@ -4,6 +4,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,18 +15,22 @@ import org.json.JSONObject;
 import com.nwitty.helpers.FileHelpers;
 import com.nwitty.helpers.Internet;
 
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.Toast;
 
@@ -41,6 +46,8 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 	HashMap<String, String> _queryCache;
 	String _helpText = "Enter a search term and touch \"Go\".";
 	ImageView _logo;
+	Intent _historyActivity;
+	JSONArray _jsonResults;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +64,7 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
         _appLayout.setLayoutParams(_lp);
         
         // Add a new search form
-        _search = new SearchForm(_context, "Search Query", "Go");
+        _search = new SearchForm(_context, "Search Query", "Go", "History");
         _appLayout.addView(_search);
         
         
@@ -66,7 +73,10 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
         _logo.setImageResource(R.drawable.quick_search);
         _appLayout.addView(_logo);
         
-        // handle the button click
+        // Initialize the history viewer
+        _historyActivity = new Intent(_context, HistorySelector.class);
+        
+        // handle the search button click
         _search.getButton().setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -76,6 +86,7 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 				if (searchTerm.length() == 0) {
 					// refuse to search if the query is blank
 					_results.addRow(_helpText);
+					
 				} else {
 					// clear any previous results
 					_results.reset();
@@ -106,6 +117,15 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 					
 				}
 				
+			}
+		});
+        
+        // handle history button click
+        _search.getHistoryButton().setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				startActivityForResult(_historyActivity, 0);
 			}
 		});
         
@@ -143,10 +163,36 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 			}
 		}
         
-        
+        ListView listView = _results.getResultList();
+        listView.setTextFilterEnabled(true);
+        listView.setOnItemClickListener(new OnItemClickListener() {
+        	public void onItemClick(AdapterView<?> parent, View view,
+        					int pos, long id) {
+        		try {
+        			JSONObject tweet = _jsonResults.getJSONObject(pos);
+            		//Toast toast = Toast.makeText(_context, tweet.getString("text"), Toast.LENGTH_SHORT);
+            		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(tweet.getString("profile_image_url").replace("_normal", "")));
+            		startActivity(browserIntent);
+            		//toast.show();
+        		} catch (JSONException e) {
+        			Log.e("JSON", "JSON OBJECT EXCEPTION");
+        		}
+        		
+        	}
+        });
   
         
         setContentView(_appLayout);
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+      if (resultCode == RESULT_OK && requestCode == 0) {
+        Bundle result = data.getExtras();
+        _search.getField().setText(result.get("query").toString());
+        _search.getButton().performClick();
+        Log.e("ACTIVITY RESULT", result.get("query").toString());
+      }
     }
  
     @Override
@@ -218,6 +264,7 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
     	try {
     		JSONObject json = new JSONObject(result);
 			JSONArray results = json.getJSONArray("results");
+			_jsonResults = results;
 		
     		for (int i = 0; i < results.length(); i++) {
     			// build the tweet and add it
