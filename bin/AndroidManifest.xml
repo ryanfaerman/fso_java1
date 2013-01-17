@@ -20,8 +20,7 @@
         android:theme="@style/Theme.MyTheme" >
         <activity
             android:name="com.nwitty.java1.twitterquicksearch.MainActivity"
-            android:label="@string/app_name"
-            android:screenOrientation="portrait" >
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

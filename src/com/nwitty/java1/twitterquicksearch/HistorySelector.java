@@ -1,5 +1,6 @@
 package com.nwitty.java1.twitterquicksearch;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.nwitty.helpers.FileHelpers;
@@ -12,6 +13,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -19,57 +21,35 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.AdapterView.OnItemClickListener;
 
-public class HistorySelector extends Activity implements OnItemSelectedListener {
+public class HistorySelector extends Activity implements HistoryFragment.ResultListener {
 	
 	Context _context;
-	LinearLayout _mainLayout;
 	LayoutParams _lp;
 	SearchForm _search;
 	RecentSearches _history;
 	String _query = "";
 	HashMap<String, String> _queryCache;
-	SearchResults _recentSearchList;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		Log.i("TRACE", "history initializing");
+		
+		setContentView(R.layout.historyfrag);
 		
 		_context = this;
-		// Initialize the main layout
-        _mainLayout = new LinearLayout(_context);
-        _mainLayout.setOrientation(LinearLayout.VERTICAL);
-        _lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-        _mainLayout.setLayoutParams(_lp);
         
         
-        _recentSearchList = new SearchResults(_context);
-        _mainLayout.addView(_recentSearchList);
         
-        
-        _queryCache = loadHistory();
-        
-        // get the previous search terms
-        for (String key: _queryCache.keySet()) {
-        	_recentSearchList.addRow(key);
-        }
-        
-        ListView listView = _recentSearchList.getResultList();
-        listView.setTextFilterEnabled(true);
-        listView.setOnItemClickListener(new OnItemClickListener() {
-        	public void onItemClick(AdapterView<?> parent, View view,
-        					int pos, long id) {
-        		_query = parent.getItemAtPosition(pos).toString();
-        		finish();
-        	}
-        });
-        
-        setContentView(_mainLayout);
 	}
 	
 	public void finish() {
+		Log.i("TRACE", "history finishing");
 		Intent data = new Intent();
 	    data.putExtra("query", _query);
 	    setResult(RESULT_OK, data);
+	    
+	    Log.i("TRACE", "history super finishing");
 	    super.finish();
 	}
 	
@@ -86,17 +66,28 @@ public class HistorySelector extends Activity implements OnItemSelectedListener 
     	
     	return history;
     }
-    
-    public void onItemSelected(AdapterView<?> parent, View view, 
-            int pos, long id) {
-        // An item was selected. You can retrieve the selected item using
+
+	@Override
+	public void onSelection(String data) {
+		Log.i("TRACE", "history on selection");
+		_query = data;
+		finish();
+		
+	}
+
+	@Override
+	public void initializeHistory() {
+		ArrayList<String> recentSearchList = new ArrayList<String>();
         
-        _query = parent.getItemAtPosition(pos).toString();
-        Log.i("SELECTED", _query);
-    }
-    
-    public void onNothingSelected(AdapterView<?> parent) {
-        // Another interface callback
-    	Log.i("SELECTED", "NOTHING");
-    }
+        
+        _queryCache = loadHistory();
+        
+        // get the previous search terms
+        for (String key: _queryCache.keySet()) {
+        	recentSearchList.add(key);
+        }
+        
+        ((ListView) findViewById(R.id.history_list)).setAdapter(new ArrayAdapter<String>(this, R.layout.list_tweet,recentSearchList));
+		
+	}
 }

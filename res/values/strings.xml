@@ -5,4 +5,7 @@
     <string name="history_name">Recent Twitter Searches</string>
     <string name="hello_world">Hello world!</string>
     <string name="menu_settings">Settings</string>
+    <string name="history_button">History</string>
+    <string name="search_button">GO</string>
+    <string name="search_form_hint">Search Query</string>
 </resources>
