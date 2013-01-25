@@ -20,9 +20,16 @@ import com.nwitty.java1.twitterquicksearch.HistoryButtonFragment.HistoryButtonLi
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.Messenger;
 import android.app.Activity;
 import android.content.Context;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.MatrixCursor;
+import android.support.v4.widget.SimpleCursorAdapter;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -47,10 +54,6 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 	Boolean _connected = false;
 	HashMap<String, String> _queryCache;
 	JSONArray _jsonResults;
-	
-	static final String[] FRUITS = new String[] { "Apple", "Avocado", "Banana",
-		"Blueberry", "Coconut", "Durian", "Guava", "Kiwifruit",
-		"Jackfruit", "Mango", "Olive", "Pear", "Sugar-apple" };
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +82,7 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 			toast.show();
 		}
         
+
         
     }
     
@@ -102,61 +106,7 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
         return true;
     }
     
-    private void getSearchResults(String searchTerm) {
-    	String baseURL = "http://search.twitter.com/search.json?rpp=50&result_type=mixed&page=1&q=";
-    	String q = "";
-    	try {
-			q = URLEncoder.encode(searchTerm, "UTF-8");
-		} catch (Exception e) {
-			Log.e("BAD URL", "ENCODING PROBLEM");
-		}
-    	
-    	URL requestURL;
-    	try {
-			requestURL = new URL(baseURL+q);
-			SearchRequest sr = new SearchRequest();
-			
-	    	Toast toast = Toast.makeText(_context, "Searching Twitter", Toast.LENGTH_SHORT);
-			toast.show();
-			sr.execute(requestURL);
-		} catch (MalformedURLException e) {
-			Log.e("BAD URL", "MALFORMED URL");
-			requestURL = null;
-		}
 
-    }
-    
-    private class SearchRequest extends AsyncTask<URL, Void, String> {
-    	@Override
-    	protected String doInBackground(URL...urls) {
-    		String response = "";
-    		for(URL url: urls) {
-    			// make the request
-    			response = Internet.get(url);
-    		}
-    		return response;
-    	}
-    	
-    	@Override
-    	protected void onPostExecute(String result) {
-    		Log.i("URL RESPONSE", result);
-    		try {
-    			// show dem results - duh!
-    			displayResults(result);
-    			
-    			
-    			// we need to pull the query from the JSON for the cache 
-    			JSONObject json = new JSONObject(result);
-    			    			
-    			// cache the query and results for later use
-    			_queryCache.put(json.getString("query"), result);
-    			FileHelpers.storeObjectFile(_context, "query_history", _queryCache, false);
-			} catch (JSONException e) {
-				Log.e("JSON", "JSON OBJECT EXCEPTION");
-			}
-    		
-    	}
-    }
     
     private void displayResults(String result) {
     	
@@ -197,11 +147,31 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 
 	@Override
 	public void onSearch(String searchTerm) {
-		getSearchResults(searchTerm);
+//		getSearchResults(searchTerm);
+		Messenger messenger = new Messenger(messageHandler);
+		Intent myIntent = new Intent(getApplicationContext(), SearchService.class);
+		myIntent.putExtra("MESSENGER", messenger);
+		myIntent.putExtra("query", searchTerm);
+		startService(myIntent);
+		Log.i("TRACE", "attempting to search for "+searchTerm);
 	}
+	
+	private Handler messageHandler = new Handler() {
+		public void handleMessage(Message message){
+		    //HANDLER CODE BODY
+			Object result = message.obj;
+			if(message.arg1 == RESULT_OK && result != null) {
+				displayResults((String) result);
+			} else {
+				Log.i("TRACE", "SEARCH FAILED");
+			}
+		  }
+	};
 
 	@Override
 	public void onHistoryList() {
+		
+		
 		Log.i("TRACE", "prepping history intent");
 		Intent _historyActivity = new Intent(_context, HistorySelector.class);
 		
@@ -214,7 +184,7 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 	public void onSelection(String data) {
 		// TODO Auto-generated method stub
 		// do nothing
-		getSearchResults(data);
+		onSearch(data);
 		((EditText) findViewById(R.id.searchField)).setText(data);
 	}
 	
@@ -222,14 +192,32 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 	public void initializeHistory() {
 		Log.i("TRACE", "main init history");
 		ArrayList<String> recentSearchList = new ArrayList<String>();
+
         
+        String[] projection = new String[] {
+        	    HistoryProvider._ID,
+        	    HistoryProvider.TERM
+        	};
+        Log.i("TRACE", "built projection");
         
+        Cursor cur = getContentResolver().query(HistoryProvider.CONTENT_URI, projection, null, null, null);
+        Log.i("TRACE", "cursor size count" + cur.getCount());
         
-        // get the previous search terms
-        for (String key: _queryCache.keySet()) {
-        	recentSearchList.add(key);
+        if (cur.moveToFirst()) {
+        	Log.i("TRACE", "moved to first");
+            String term; 
+            int termColumn = cur.getColumnIndex(HistoryProvider.TERM); 
+            Log.i("TRACE", "found term column "+ termColumn);
+            do {
+                // Get the field values
+                term = cur.getString(termColumn);
+               Log.i("TRACE", "TERM: "+term);
+               recentSearchList.add(term);
+   
+            } while (cur.moveToNext());
+
         }
-        
+        Log.i("TRACE", "done with this cursor");
         ((ListView) findViewById(R.id.history_list)).setAdapter(new ArrayAdapter<String>(this, R.layout.list_tweet,recentSearchList));
 		
 	}

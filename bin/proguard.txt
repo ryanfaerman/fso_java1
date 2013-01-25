@@ -1,0 +1,23 @@
+# view res/layout/historybuttonfrag.xml #generated:3
+# view res/layout/searchfrag.xml #generated:23
+-keep class com.nwitty.java1.twitterquicksearch.HistoryButtonFragment { <init>(...); }
+
+# view land/res/layout-land/searchfrag.xml #generated:21
+# view res/layout/historyfrag.xml #generated:2
+-keep class com.nwitty.java1.twitterquicksearch.HistoryFragment { <init>(...); }
+
+# view AndroidManifest.xml #generated:30
+-keep class com.nwitty.java1.twitterquicksearch.HistorySelector { <init>(...); }
+
+# view AndroidManifest.xml #generated:21
+-keep class com.nwitty.java1.twitterquicksearch.MainActivity { <init>(...); }
+
+# view land/res/layout-land/searchfrag.xml #generated:33
+# view res/layout/resultsfrag.xml #generated:2
+# view res/layout/searchfrag.xml #generated:35
+-keep class com.nwitty.java1.twitterquicksearch.ResultsFragment { <init>(...); }
+
+# view land/res/layout-land/searchfrag.xml #generated:14
+# view res/layout/searchfrag.xml #generated:15
+-keep class com.nwitty.java1.twitterquicksearch.SearchFragment { <init>(...); }
+

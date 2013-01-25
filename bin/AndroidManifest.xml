@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_USER_DICTIONARY"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
 
     <application
         android:allowBackup="true"
@@ -32,6 +33,11 @@
             android:label="@string/history_name"
             android:screenOrientation="portrait" >
         </activity>
+        <service android:name="SearchService">
+		</service> 
+		<provider android:name="HistoryProvider"
+         android:authorities="com.nwitty.java1.twitterquicksearch.HistoryProvider"
+         android:exported="false" />
         
         
     </application>

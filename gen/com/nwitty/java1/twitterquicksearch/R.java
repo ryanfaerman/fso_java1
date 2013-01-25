@@ -48,6 +48,7 @@ public final class R {
         public static final int menu_settings=0x7f040003;
         public static final int search_button=0x7f040005;
         public static final int search_form_hint=0x7f040006;
+        public static final int search_service_name=0x7f040007;
     }
     public static final class style {
         /** 

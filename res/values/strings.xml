@@ -8,4 +8,5 @@
     <string name="history_button">History</string>
     <string name="search_button">GO</string>
     <string name="search_form_hint">Search Query</string>
+    <string name="search_service_name">Twitter Quick Search Service</string>
 </resources>

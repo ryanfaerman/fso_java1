@@ -8,6 +8,7 @@ import com.nwitty.helpers.FileHelpers;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -77,16 +78,34 @@ public class HistorySelector extends Activity implements HistoryFragment.ResultL
 
 	@Override
 	public void initializeHistory() {
+		Log.i("TRACE", "main init history");
 		ArrayList<String> recentSearchList = new ArrayList<String>();
+
         
+        String[] projection = new String[] {
+        	    HistoryProvider._ID,
+        	    HistoryProvider.TERM
+        	};
+        Log.i("TRACE", "built projection");
         
-        _queryCache = loadHistory();
+        Cursor cur = getContentResolver().query(HistoryProvider.CONTENT_URI, projection, null, null, null);
+        Log.i("TRACE", "cursor size count" + cur.getCount());
         
-        // get the previous search terms
-        for (String key: _queryCache.keySet()) {
-        	recentSearchList.add(key);
+        if (cur.moveToFirst()) {
+        	Log.i("TRACE", "moved to first");
+            String term; 
+            int termColumn = cur.getColumnIndex(HistoryProvider.TERM); 
+            Log.i("TRACE", "found term column "+ termColumn);
+            do {
+                // Get the field values
+                term = cur.getString(termColumn);
+               Log.i("TRACE", "TERM: "+term);
+               recentSearchList.add(term);
+   
+            } while (cur.moveToNext());
+
         }
-        
+        Log.i("TRACE", "done with this cursor");
         ((ListView) findViewById(R.id.history_list)).setAdapter(new ArrayAdapter<String>(this, R.layout.list_tweet,recentSearchList));
 		
 	}
