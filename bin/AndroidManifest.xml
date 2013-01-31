@@ -38,6 +38,8 @@
 		<provider android:name="HistoryProvider"
          android:authorities="com.nwitty.java1.twitterquicksearch.HistoryProvider"
          android:exported="false" />
+		
+		<activity android:name="com.markupartist.android.widget.pulltorefresh" />
         
         
     </application>

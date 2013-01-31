@@ -13,6 +13,9 @@ import org.json.JSONObject;
 
 
 
+import com.markupartist.android.widget.PullToRefreshListView;
+import com.markupartist.android.widget.PullToRefreshListView.OnRefreshListener;
+
 import com.nwitty.helpers.FileHelpers;
 import com.nwitty.helpers.Internet;
 import com.nwitty.java1.twitterquicksearch.HistoryButtonFragment.HistoryButtonListener;
@@ -48,12 +51,13 @@ import android.widget.ListView;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.Toast;
 
-public class MainActivity extends Activity implements SearchFragment.SearchListener, HistoryFragment.ResultListener, HistoryButtonFragment.HistoryButtonListener {
+public class MainActivity extends Activity implements SearchFragment.SearchListener, HistoryFragment.ResultListener, HistoryButtonFragment.HistoryButtonListener, ResultsFragment.RefreshListener {
 	
 	Context _context;
 	Boolean _connected = false;
 	HashMap<String, String> _queryCache;
 	JSONArray _jsonResults;
+	String _searchTerm;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,10 +84,7 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 			Log.i("TRACE", "connection seems unavailable");
 			Toast toast = Toast.makeText(_context, "NO INTERNET CONNECTION", Toast.LENGTH_LONG);
 			toast.show();
-		}
-        
-
-        
+		} 
     }
     
     @Override
@@ -109,7 +110,7 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 
     
     private void displayResults(String result) {
-    	
+    	((PullToRefreshListView) findViewById(R.id.searchResults)).onRefreshComplete();
     	try {
     		JSONObject json = new JSONObject(result);
 			JSONArray results = json.getJSONArray("results");
@@ -148,12 +149,14 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 	@Override
 	public void onSearch(String searchTerm) {
 //		getSearchResults(searchTerm);
+		_searchTerm = searchTerm;
 		Messenger messenger = new Messenger(messageHandler);
 		Intent myIntent = new Intent(getApplicationContext(), SearchService.class);
 		myIntent.putExtra("MESSENGER", messenger);
 		myIntent.putExtra("query", searchTerm);
 		startService(myIntent);
 		Log.i("TRACE", "attempting to search for "+searchTerm);
+		
 	}
 	
 	private Handler messageHandler = new Handler() {
@@ -161,6 +164,7 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
 		    //HANDLER CODE BODY
 			Object result = message.obj;
 			if(message.arg1 == RESULT_OK && result != null) {
+				
 				displayResults((String) result);
 			} else {
 				Log.i("TRACE", "SEARCH FAILED");
@@ -219,6 +223,12 @@ public class MainActivity extends Activity implements SearchFragment.SearchListe
         }
         Log.i("TRACE", "done with this cursor");
         ((ListView) findViewById(R.id.history_list)).setAdapter(new ArrayAdapter<String>(this, R.layout.list_tweet,recentSearchList));
+		
+	}
+
+	@Override
+	public void onRefresh() {
+		onSearch(_searchTerm);
 		
 	}
     

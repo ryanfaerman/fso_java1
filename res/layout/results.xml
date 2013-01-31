@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
     
-	<ListView 
+	<com.markupartist.android.widget.PullToRefreshListView 
 	        android:id="@+id/searchResults"
 	        android:layout_width="match_parent"
 	        android:layout_height="0dip"
